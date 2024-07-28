@@ -18,7 +18,7 @@ def Reval(
     criteria_model,
     mode="single",
     processed_tasks_path="processed_tasks.csv",
-    results_path="results.csv",
+    results_path="results.json",
 ) -> Dict[str, Any]:
     """
     Evaluate models on tasks specified in a CSV file.
@@ -63,7 +63,8 @@ def Reval(
         if f"{model.name}.grade" not in columns:
             tasks[f"{model.name}.grade"] = None
 
-    for idx, row in tqdm(tasks.iterrows()):
+    print(tasks.shape[0])
+    for idx, row in tqdm(tasks.iterrows(), total=tasks.shape[0]):
         if row.get("tasks") is None:
             Warning(f"Skipping row {idx} as it has no tasks")
             continue
@@ -119,94 +120,96 @@ def Reval(
                 # raise error
                 raise ValueError(f"Invalid arena result: {arena_result}")
 
+        print("")
+
         # we then patch back the row
         tasks.loc[idx] = row
 
         # we need to then return the result
 
-        results = []
-        tasks.to_csv(processed_tasks_path, index=False)
+    results = []
+    tasks.to_csv(processed_tasks_path, index=False)
 
-        if mode == "single":
-            # we can just take the sum of model_results per model
-            """
-                [
-                    {
-                        "model": model_name<str>, 
-                        "score": score<int>
-                    }
-                ]
-            """
-            for model in models_to_eval:
-                model_results = tasks[f"{model.name}.grade"]
-                score = model_results.sum()
-                results.append({"model": model.name, "score": score})
+    if mode == "single":
+        # we can just take the sum of model_results per model
+        """
+            [
+                {
+                    "model": model_name<str>, 
+                    "score": score<int>
+                }
+            ]
+        """
+        for model in models_to_eval:
+            model_results = tasks[f"{model.name}.grade"]
+            score = model_results.sum()
+            results.append({"model": model.name, "score": score})
 
-        elif mode == "arena":
-            ratings = {model.name: 1000 for model in models_to_eval}
-            k_factor = 32
+    elif mode == "arena":
+        ratings = {model.name: 1000 for model in models_to_eval}
+        k_factor = 32
 
-            for idx, row in tasks.iterrows():
-                # get non-zero columns that end with ".grade"
-                non_zero_columns = [
-                    column
-                    for column in row.index
-                    if column.endswith(".grade") and row[column] != 0
-                ]
+        for idx, row in tasks.iterrows():
+            # get non-zero columns that end with ".grade"
+            non_zero_columns = [
+                column
+                for column in row.index
+                if column.endswith(".grade") and row[column] != 0
+            ]
 
-                if len(non_zero_columns) != 2:
-                    raise ValueError(
-                        f"Invalid number of non-zero columns: {len(non_zero_columns)}"
-                    )
-
-                model1, model2 = non_zero_columns
-                # remove the grade
-                model1 = model1[:-6]
-                model2 = model2[:-6]
-
-                model1_rating = ratings[model1]
-                model2_rating = ratings[model2]
-
-                model_1_expected_score = 1 / (
-                    1 + 10 ** ((model2_rating - model1_rating) / 400)
+            if len(non_zero_columns) != 2:
+                raise ValueError(
+                    f"Invalid number of non-zero columns: {len(non_zero_columns)}"
                 )
 
-                model_2_expected_score = 1 / (
-                    1 + 10 ** ((model1_rating - model2_rating) / 400)
-                )
+            model1, model2 = non_zero_columns
+            # remove the grade
+            model1 = model1[:-6]
+            model2 = model2[:-6]
 
-                model1_score = max(row[f"{model1}.grade"], 0)
-                model2_score = max(row[f"{model2}.grade"], 0)
+            model1_rating = ratings[model1]
+            model2_rating = ratings[model2]
 
-                model1_new_rating = model1_rating + k_factor * (
-                    model1_score - model_1_expected_score
-                )
+            model_1_expected_score = 1 / (
+                1 + 10 ** ((model2_rating - model1_rating) / 400)
+            )
 
-                model2_new_rating = model2_rating + k_factor * (
-                    model2_score - model_2_expected_score
-                )
+            model_2_expected_score = 1 / (
+                1 + 10 ** ((model1_rating - model2_rating) / 400)
+            )
 
-                ratings[model1] = model1_new_rating
-                ratings[model2] = model2_new_rating
+            model1_score = max(row[f"{model1}.grade"], 0)
+            model2_score = max(row[f"{model2}.grade"], 0)
 
-            for model in models_to_eval:
-                model_results = tasks[f"{model.name}.grade"]
-                results.append(
-                    {
-                        "model": model.name,
-                        "score": model_results.sum(),
-                        "elo": ratings[model.name],
-                        "num_matches": np.count_nonzero(
-                            model_results
-                        ),  # number of nonzero elements
-                    }
-                )
+            model1_new_rating = model1_rating + k_factor * (
+                model1_score - model_1_expected_score
+            )
 
-        # write results
-        with open(results_path, "w") as f:
-            json.dump(results, f)
+            model2_new_rating = model2_rating + k_factor * (
+                model2_score - model_2_expected_score
+            )
 
-        return results
+            ratings[model1] = model1_new_rating
+            ratings[model2] = model2_new_rating
+
+        for model in models_to_eval:
+            model_results = tasks[f"{model.name}.grade"]
+            results.append(
+                {
+                    "model": model.name,
+                    "score": model_results.sum(),
+                    "elo": ratings[model.name],
+                    "num_matches": np.count_nonzero(
+                        model_results
+                    ),  # number of nonzero elements
+                }
+            )
+
+    # write results
+    with open(results_path, "w") as f:
+        json.dump(results, f)
+
+    return results
 
 
 # if __name__ == "__main__":
