@@ -20,18 +20,18 @@ class LanguageModel:
 
         # get model_provider
         if "/" in model_name:
-            model_provider = "together"
+            self.model_provider = "together"
             self.model = model_name
             self.client = Together(api_key=os.getenv("TOGETHER_API_KEY"))
         elif "claude" in model_name:
-            model_provider = "claude"
+            self.model_provider = "claude"
             if model_name in claude_disambiguations:
                 self.model = claude_disambiguations[model_name]
             else:
                 self.model = model_name
             self.client = Anthropic()
         elif "gpt" in model_name:
-            model_provider = "openai"
+            self.model_provider = "openai"
             self.model = model_name
             self.client = OpenAI()
         else:
@@ -53,7 +53,7 @@ class LanguageModel:
                 )
             elif self.model_provider == "openai":
                 return (
-                    self.client.completions.create(
+                    self.client.chat.completions.create(
                         model=self.model,
                         messages=[
                             {"role": "system", "content": self.system_prompt},
@@ -68,7 +68,7 @@ class LanguageModel:
             elif self.model_provider == "together":
                 # uses same schema as open
                 return (
-                    self.client.completions.create(
+                    self.client.chat.completions.create(
                         model=self.model,
                         messages=[
                             {"role": "system", "content": self.system_prompt},
@@ -95,7 +95,7 @@ class LanguageModel:
                 )
             elif self.model_provider == "openai":
                 return (
-                    self.client.completions.create(
+                    self.client.chat.completions.create(
                         model=self.model,
                         messages=[{"role": "user", "content": prompt}],
                         max_tokens=4096,
@@ -107,7 +107,7 @@ class LanguageModel:
             elif self.model_provider == "together":
                 # uses same schema as open
                 return (
-                    self.client.completions.create(
+                    self.client.chat.completions.create(
                         model=self.model,
                         messages=[{"role": "user", "content": prompt}],
                         max_tokens=4096,

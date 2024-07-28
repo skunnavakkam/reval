@@ -58,7 +58,7 @@ Present your results in the following format:
 
 Ensure that your criteria are specific, measurable, and directly related to the given task. Avoid vague or subjective statements. Each criterion should be a complete sentence that clearly describes a specific aspect of task performance."""
 
-        raw_response = LanguageModel("gpt-4o-mini")(query)
+        raw_response = LanguageModel("gpt-4o-mini").get_generation(query)
         success_criteria = raw_response.split("<success_criteria>")[1].split(
             "</success_criteria>"
         )[0]

@@ -3,15 +3,15 @@ import pandas as pd
 from tqdm import tqdm
 import random
 import argparse
-from language_models import LanguageModel
+from .language_models import LanguageModel
 import json
 import numpy as np
-from functions import binary_judge, criteria_generator
+from .functions import binary_judge, criteria_generator
 
 # MARK: Criteria Generator
 
 
-def reval(
+def Reval(
     task_location,  # csv file OR pandas dataframe
     models_to_eval,
     judging_model,
@@ -207,12 +207,6 @@ def reval(
             json.dump(results, f)
 
         return results
-
-
-if __name__ == "__main__":
-    result = reval(
-        "../tasks.csv", [LanguageModel("gpt-4o-mini")], binary_judge, criteria_generator
-    )
 
 
 # if __name__ == "__main__":
