@@ -7,8 +7,8 @@ from aiolimiter import AsyncLimiter
 def Reval(
     df: pd.DataFrame,
     models_to_judge: List[Callable],
-    preprocessing: List[Callable],
     grader: Callable,
+    preprocessing: List[Callable] = [],
 ) -> pd.DataFrame:
     col = [c.lower() for c in df.columns]
     if "tasks" not in col:
@@ -82,11 +82,12 @@ async def run_async(func: Callable, *args, **kwargs) -> Any:
 async def AsyncReval(
     df: pd.DataFrame,
     models_to_judge: List[Callable],
-    preprocessing: List[Callable],
     grader: Callable,
+    preprocessing: List[Callable] = [],
     rate_limit: float = None,
 ) -> pd.DataFrame:
-    col = [c.lower() for c in df.columns]
+    df.columns = [c.lower() for c in df.columns]
+    col = df.columns
     if "tasks" not in col:
         raise ValueError("Tasks column not found in the dataframe")
 

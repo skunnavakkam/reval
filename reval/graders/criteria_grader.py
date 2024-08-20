@@ -2,7 +2,7 @@ from reval.language_models import GenericLanguageModel, AsyncGenericLanguageMode
 from string import Template
 
 
-class CriteriBinaryaGrader:
+class CriteriaBinaryGrader:
     def __init__(self, model_name="gpt-4o-mini"):
         self.model = GenericLanguageModel(model_name)
         self.prompt = Template(
@@ -136,7 +136,7 @@ Finally, return your grade, either 1 if the model was successful or 0 if the mod
         return ret
 
 
-class CriteriScaleGrader:
+class CriteriaScaleGrader:
     def __init__(self, model_name="gpt-4o-mini"):
         self.model = GenericLanguageModel(model_name)
         self.prompt = Template(
